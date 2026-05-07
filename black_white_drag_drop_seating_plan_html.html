@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Black & White Seating Plan</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: white;
+        color: black;
+        margin: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    @media print {
+        .controls,
+        #pdfButtonContainer,
+        #instructions {
+            display: none;
+        }
+
+        body {
+            margin: 10px;
+        }
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: flex-start;
+    }
+
+    .control-box {
+        display: flex;
+        flex-direction: column;
+    }
+
+    label {
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+
+    select, textarea, button {
+        border: 2px solid black;
+        background: white;
+        color: black;
+        font-size: 16px;
+        padding: 8px;
+    }
+
+    textarea {
+        width: 500px;
+        height: 180px;
+        resize: vertical;
+    }
+
+    button {
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: black;
+        color: white;
+    }
+
+    #pdfButtonContainer {
+        margin-top: 25px;
+        text-align: center;
+    }
+
+    #classroomTop {
+        border: 2px solid black;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+
+    #classroomBottom {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        gap: 10px;
+    }
+
+    .classroom-label {
+        border: 2px solid black;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .small-label {
+        flex: 1;
+    }
+
+    .large-label {
+        flex: 3;
+    }
+
+    .editable-label {
+        width: 100%;
+        border: none;
+        background: transparent;
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+        outline: none;
+    }
+
+    #instructions {
+        border: 2px solid blue;
+        color: blue;
+        padding: 15px;
+        margin-bottom: 20px;
+        line-height: 1.8;
+        font-weight: bold;
+    }
+
+    #warning {
+        margin-top: 15px;
+        padding: 12px;
+        border: 2px solid black;
+        display: none;
+        font-weight: bold;
+    }
+
+    #seatingPlan {
+        display: grid;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .seat {
+        border: 2px solid black;
+        min-height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px;
+        background: white;
+        font-weight: bold;
+        user-select: none;
+        white-space: pre-line;
+        line-height: 1.4;
+    }
+
+    .seat.dragging {
+        opacity: 0.4;
+    }
+
+    .seat.empty {
+        color: #999;
+        font-style: italic;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Seating Plan Planner</h1>
+
+<div id="instructions">
+    1. Import name list, separate each name by lines<br>
+    2. Input row and column number<br>
+    3. Drag and drop the seats<br>
+    4. Export as PDF and print
+</div>
+    1. Import name list, separate each name by lines<br>
+    2. Input row and column number<br>
+    3. Drag and drop the seats<br>
+    4. Export as PDF and print
+</div>
+
+<div class="controls">
+
+    <div class="control-box">
+        <label>Rows</label>
+        <select id="rows">
+            <option>4</option>
+            <option selected>5</option>
+            <option>6</option>
+            <option>7</option>
+        </select>
+    </div>
+
+    <div class="control-box">
+        <label>Columns</label>
+        <select id="cols">
+            <option>4</option>
+            <option>5</option>
+            <option selected>6</option>
+            <option>7</option>
+        </select>
+    </div>
+
+    <div class="control-box">
+        <label>Names (one per line)</label>
+        <textarea id="names" placeholder="John
+Mary
+Alex"></textarea>
+    </div>
+
+    <div class="control-box">
+        <label>&nbsp;</label>
+        <button onclick="generatePlan()">Generate Seating Plan</button>
+    </div>
+
+</div>
+
+<h2 style="text-align:center; margin-bottom: 10px;">
+    Seating Plan of:
+    <input 
+        class="editable-label" 
+        value="Class Name"
+        style="width: 300px; border-bottom: 2px solid black; display: inline-block;"
+    />
+</h2>
+
+<div id="classroomTop">
+    <input class="editable-label" value="Locker" />
+</div>
+
+<div id="warning"></div>
+<div id="seatingPlan"></div>
+
+<div id="classroomBottom">
+    <div class="classroom-label small-label">
+        <input class="editable-label" value="Door" />
+    </div>
+
+    <div class="classroom-label large-label">
+        <input class="editable-label" value="Board" />
+    </div>
+
+    <div class="classroom-label small-label">
+        <input class="editable-label" value="Teacher" />
+    </div>
+</div>
+
+<div id="pdfButtonContainer">
+    <button onclick="generatePDF()">Generate PDF</button>
+</div>
+
+<script>
+    let draggedSeat = null;
+
+    function generatePlan() {
+
+        const rows = parseInt(document.getElementById("rows").value);
+        const cols = parseInt(document.getElementById("cols").value);
+
+        const totalSeats = rows * cols;
+
+        const namesText = document.getElementById("names").value.trim();
+
+        let names = namesText
+            ? namesText.split("\n").map(n => n.trim()).filter(n => n !== "")
+            : [];
+
+        // Too many names warning
+        if (names.length > totalSeats) {
+            const seatingPlan = document.getElementById("seatingPlan");
+            const warning = document.getElementById("warning");
+
+            seatingPlan.innerHTML = "";
+            warning.style.display = "block";
+            warning.textContent = `Too many names! Maximum seats available: ${totalSeats}`;
+            return;
+        }
+
+        while (names.length < totalSeats) {
+            names.push("");
+        }
+
+        // Arrange seats starting from bottom-right,
+        // then upwards, then move left column by column
+        const arrangedNames = Array(totalSeats).fill("");
+
+        let index = 0;
+
+        for (let col = cols - 1; col >= 0; col--) {
+            for (let row = rows - 1; row >= 0; row--) {
+                const position = row * cols + col;
+                arrangedNames[position] = names[index] || "";
+                index++;
+            }
+        }
+
+        const seatingPlan = document.getElementById("seatingPlan");
+        const warning = document.getElementById("warning");
+
+        
+
+        warning.style.display = "none";
+
+        seatingPlan.innerHTML = "";
+        seatingPlan.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+        arrangedNames.forEach(name => {
+
+            const seat = document.createElement("div");
+
+            seat.className = "seat";
+            seat.draggable = true;
+
+            if (name === "") {
+                seat.textContent = "Empty";
+                seat.classList.add("empty");
+            } else {
+
+                // Split English + Chinese names into separate lines
+                const formattedName = name.replace(/\s*([\u4e00-\u9fff].*)$/, "\n$1");
+
+                seat.textContent = formattedName;
+            }
+
+            seat.addEventListener("dragstart", () => {
+                draggedSeat = seat;
+                seat.classList.add("dragging");
+            });
+
+            seat.addEventListener("dragend", () => {
+                seat.classList.remove("dragging");
+            });
+
+            seat.addEventListener("dragover", (e) => {
+                e.preventDefault();
+            });
+
+            seat.addEventListener("drop", () => {
+
+                if (draggedSeat === seat) return;
+
+                const tempText = seat.textContent;
+                const tempEmpty = seat.classList.contains("empty");
+
+                seat.textContent = draggedSeat.textContent;
+                draggedSeat.textContent = tempText;
+
+                if (draggedSeat.classList.contains("empty")) {
+                    seat.classList.add("empty");
+                } else {
+                    seat.classList.remove("empty");
+                }
+
+                if (tempEmpty) {
+                    draggedSeat.classList.add("empty");
+                } else {
+                    draggedSeat.classList.remove("empty");
+                }
+
+            });
+
+            seatingPlan.appendChild(seat);
+
+        });
+
+    }
+
+    function generatePDF() {
+        window.print();
+    }
+
+    generatePlan();
+</script>
+
+</body>
+</html>
