@@ -96,14 +96,53 @@
     }
 
     #printArea {
-        width: 297mm;
-        min-height: 210mm;
+        width: 277mm;
+        min-height: 190mm;
         margin: 30px auto;
-        padding: 12mm;
+        padding: 8mm;
         border: 3px solid black;
         box-sizing: border-box;
         background: white;
         position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #planHeader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 30px;
+        margin-bottom: 16px;
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+
+    .header-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .header-title {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .header-input {
+        width: 320px;
+        border-bottom: 2px solid black;
+        font-size: 20px;
+        padding-bottom: 3px;
+    }
+
+    .date-input {
+        width: 180px;
+        border-bottom: 2px solid black;
+        font-size: 20px;
+        padding-bottom: 3px;
     }
 
     #classroomTop {
@@ -244,26 +283,24 @@ Alex"></textarea>
 </div>
 
 <div id="printArea">
-<h2 style="text-align:center; margin-bottom: 10px; display:flex; justify-content:center; align-items:center; gap:30px; flex-wrap:wrap;">
-    <div>
-        Seating Plan of:
+<div id="planHeader">
+    <div class="header-group">
+        <span class="header-title">Seating Plan of:</span>
         <input 
-            class="editable-label" 
+            class="editable-label header-input" 
             value="Class Name"
-            style="width: 300px; border-bottom: 2px solid black; display: inline-block;"
         />
     </div>
 
-    <div>
-        Date:
+    <div class="header-group">
+        <span class="header-title">Date:</span>
         <input 
             type="date"
             id="planDate"
-            class="editable-label"
-            style="width: 170px; border-bottom: 2px solid black; display: inline-block;"
+            class="editable-label date-input"
         />
     </div>
-</h2>
+</div>
 
 <div id="classroomTop">
     <input class="editable-label" value="Locker" />
@@ -411,52 +448,34 @@ Alex"></textarea>
     function generatePDF() {
         const element = document.getElementById("printArea");
 
-        // Create dedicated PDF styling
+        // Save original styles
         const originalStyle = element.getAttribute('style') || '';
 
+        // Force EXACT same layout as preview
         element.style.width = '277mm';
         element.style.minHeight = '190mm';
-        element.style.margin = '0 auto';
         element.style.padding = '8mm';
+        element.style.margin = '0 auto';
         element.style.boxSizing = 'border-box';
         element.style.background = 'white';
-
-        // Better seat sizing for A4 landscape
-        document.querySelectorAll('.seat').forEach(seat => {
-            seat.dataset.oldMinHeight = seat.style.minHeight;
-            seat.dataset.oldFontSize = seat.style.fontSize;
-            seat.dataset.oldPadding = seat.style.padding;
-
-            seat.style.minHeight = '42px';
-            seat.style.fontSize = '11px';
-            seat.style.padding = '3px';
-        });
-
-        const seatingPlan = document.getElementById('seatingPlan');
-        const oldGap = seatingPlan.style.gap;
-        seatingPlan.style.gap = '5px';
+        element.style.overflow = 'hidden';
 
         const opt = {
-            margin: [0, 0, 0, 0],
+            margin: [0,0,0,0],
             filename: 'seating-plan.pdf',
             image: {
                 type: 'jpeg',
                 quality: 1
             },
             html2canvas: {
-                scale: 3,
+                scale: 2.5,
                 useCORS: true,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0
+                backgroundColor: '#ffffff'
             },
             jsPDF: {
                 unit: 'mm',
                 format: 'a4',
                 orientation: 'landscape'
-            },
-            pagebreak: {
-                mode: ['avoid-all']
             }
         };
 
@@ -465,16 +484,7 @@ Alex"></textarea>
             .from(element)
             .save()
             .then(() => {
-
-                // Restore styles
                 element.setAttribute('style', originalStyle);
-                seatingPlan.style.gap = oldGap;
-
-                document.querySelectorAll('.seat').forEach(seat => {
-                    seat.style.minHeight = seat.dataset.oldMinHeight;
-                    seat.style.fontSize = seat.dataset.oldFontSize;
-                    seat.style.padding = seat.dataset.oldPadding;
-                });
             });
     }
 
